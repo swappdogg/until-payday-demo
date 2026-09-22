@@ -243,6 +243,7 @@ nav button.on{background:var(--mint);color:var(--mintInk);font-weight:650}
       <h2>Backup</h2>
       <p class="note" style="margin-top:0">Everything stays on this device. Save a backup now and then so a new phone or a cleared browser doesn't cost you your records.</p>
       <div class="tools"><button class="ghost" id="exportBtn">Save backup file</button><button class="ghost hide" id="importBtn">Restore from file</button></div>
+      <p class="note">Want to see a filled-in example? <button class="link" id="sampleBtn2" type="button">Load sample data</button></p>
       <p class="note">Bought the full version? Save a backup here, then use <b>Restore from file</b> in the full app — your bills and spends carry over.</p>
       <p class="note" id="lastBackup"></p>
       <div class="tools"><button class="ghost" id="resetBtn">Erase everything</button></div>
@@ -270,7 +271,7 @@ const DEF={v:2,ready:false,currency:'$',theme:'auto',
   baseline:{amount:0,at:null},savings:0,
   bills:[],spends:[],paidLog:[],
   quick:DEFQ.map(q=>({...q})),
-  lastBackup:null,hintSeen:false,created:new Date().toISOString()};
+  lastBackup:null,hintSeen:false,demoUsed:0,created:new Date().toISOString()};
 const CUR=[['$','$'],['£','£'],['€','€'],['CA$','CA$'],['A$','A$']];
 const SCHED=[['weekly','Every week'],['biweekly','Every 2 weeks'],['semimonthly','Twice a month'],['monthly','Once a month']];
 
@@ -437,7 +438,7 @@ function render(){
   seg('themeSeg',[['auto','Match phone'],['light','Light'],['dark','Dark']],S.theme,v=>{S.theme=v;save()});
   seg('curSeg2',CUR,S.currency,v=>{S.currency=v;save()});
   schedUI('schedSeg2','schedFields2',true);
-  const left=Math.max(0,DEMO_LIMIT-S.demoUsed);
+  const left=Math.max(0,DEMO_LIMIT-(S.demoUsed|0));
   $('demoLeft').textContent=left?`Free demo · ${left} of ${DEMO_LIMIT} spends left`:'Free demo · limit reached';
   $('upsell').classList.toggle('hide',left>0);
   ['addSpend','sAmt','sNote'].forEach(id=>$(id).disabled=!left);
@@ -466,7 +467,7 @@ function schedUI(segId,fId,live){
 
 /* ---------- actions ---------- */
 function toast(t){const el=$('toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>el.classList.remove('show'),1900)}
-function addSpend(amount,note){if(amount<=0){toast('Enter an amount');return false}if(S.demoUsed>=DEMO_LIMIT){render();$('upsell').scrollIntoView({block:'center'});return false}S.demoUsed++;S.spends.push({id:uid(),amount,note,at:nowISO()});save();toast('Logged '+money(amount));return true}
+function addSpend(amount,note){if(amount<=0){toast('Enter an amount');return false}if((S.demoUsed|0)>=DEMO_LIMIT){render();$('upsell').scrollIntoView({block:'center'});return false}S.demoUsed=(S.demoUsed|0)+1;S.spends.push({id:uid(),amount,note,at:nowISO()});save();toast('Logged '+money(amount));return true}
 function onEnter(ids,fn){ids.forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fn()}}))}
 function logSpend(){if(addSpend(num($('sAmt').value),$('sNote').value.trim())){$('sAmt').value='';$('sNote').value='';$('sAmt').blur()}}
 $('addSpend').onclick=logSpend; onEnter(['sAmt','sNote'],logSpend);
@@ -524,6 +525,7 @@ $('sampleBtn').onclick=()=>{const t=todayStr(),d=pd(t),day=n=>((d.getDate()+n-1+
     spends:[{id:'a1',amount:42.18,note:'Groceries',at:at(-4)},{id:'a2',amount:5.25,note:'Coffee',at:at(-3)},{id:'a3',amount:31,note:'Gas',at:at(-2)},{id:'a4',amount:12.9,note:'Lunch',at:at(-1)},{id:'a5',amount:4.75,note:'Coffee',at:at(0)}],
     quick:DEFQ});
   save();go('today');toast('Sample data loaded — tap anything')};
+$('sampleBtn2').onclick=()=>{if(S.ready&&(S.spends.length||S.bills.length)&&!confirm('Replace your demo data with sample data?'))return;$('sampleBtn').onclick()};
 $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   try{const d=JSON.parse(await f.text());if(!d||!Array.isArray(d.spends)||!d.baseline)throw 0;
     if(S.ready&&!confirm('Replace everything on this device with this backup?')){e.target.value='';return}
